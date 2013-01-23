@@ -1,0 +1,9 @@
+*.*~
+*.*.swp
+*.exe
+*.docx
+Word\ To\ Markup\ Converter/Word\ To\ Markup\ Converter/bin
+Word\ To\ Markup\ Converter/Word\ To\ Markup\ Converter/obj
+TestConverter/TestConverter/bin
+TestConverter/TestConverter/obj
+*.suo
