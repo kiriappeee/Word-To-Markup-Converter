@@ -21,7 +21,7 @@ namespace TestConverter
             object True = true;
             Word.Application app = new Word.Application();
             Word.Document doc = new Word.Document();
-            string fileName = @"D:\Programming\C#\Word To HTML Converter\hello world.docx";
+            string fileName = @"D:\Programming\C#\Word To HTML Converter\This is an actual blog post test.docx";
             doc = app.Documents.Open(fileName, Type.Missing, True);
 
             //foreach (Word.Paragraph para in doc.Paragraphs)
@@ -217,7 +217,7 @@ namespace TestConverter
                     {
                         mainStart = start;
                     }
-                    finalhtml.Remove(start, end - start + "</p>".Length + 4);
+                    finalhtml.Remove(start, end - start + "</p>".Length);
                 }
 
                 //insert the new string
@@ -247,8 +247,8 @@ namespace TestConverter
             //HtmlAgilityPack.HtmlDocument doc = new HtmlAgilityPack.HtmlDocument();
             //doc.LoadHtml(finalhtml.ToString());
             
-            XDocument doc = XDocument.Parse(finalhtml.ToString());
-            Clipboard.SetText(finalhtml.ToString().Trim());
+            XDocument doc = XDocument.Parse(finalhtml.ToString().Replace("\v", "<br />").Replace("\r",""));
+            Clipboard.SetText(doc.ToString().Replace("<br />", "<br>").Trim());
             return finalhtml.ToString().Trim();
         }
     }
