@@ -21,7 +21,7 @@ namespace TestConverter
             object True = true;
             Word.Application app = new Word.Application();
             Word.Document doc = new Word.Document();
-            string fileName = @"D:\Programming\C#\Word To HTML Converter\This is an actual blog post test.docx";
+            string fileName = @"D:\Programming\C#\Word To Markup Converter\hello world.docx";
             doc = app.Documents.Open(fileName, Type.Missing, True);
 
             //foreach (Word.Paragraph para in doc.Paragraphs)
@@ -40,7 +40,10 @@ namespace TestConverter
             }
 
             items.Reverse();
-            listString = createList(items);
+            if (items.Count > 0)
+            {
+                listString = createList(items);
+            }               
             doc.SelectAllEditableRanges();
             doc.Range().Copy();
 
@@ -239,15 +242,10 @@ namespace TestConverter
             Console.WriteLine();
             Console.WriteLine(finalhtml);
 
-            //XDocument doc = new XDocument();
-            //doc.Add(finalhtml.ToString().Trim().Replace("\n",""));
             finalhtml = new StringBuilder(finalhtml.ToString().Trim());
             finalhtml.Insert(0, "<body>");
             finalhtml.Insert(finalhtml.Length, "</body>");
-            //HtmlAgilityPack.HtmlDocument doc = new HtmlAgilityPack.HtmlDocument();
-            //doc.LoadHtml(finalhtml.ToString());
-            
-            XDocument doc = XDocument.Parse(finalhtml.ToString().Replace("\v", "<br />").Replace("\r",""));
+            XDocument doc = XDocument.Parse(finalhtml.ToString().Replace("\v", "<br />").Replace("\r", ""));
             Clipboard.SetText(doc.ToString().Replace("<br />", "<br>").Trim());
             return finalhtml.ToString().Trim();
         }
