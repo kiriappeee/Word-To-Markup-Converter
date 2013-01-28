@@ -3,7 +3,9 @@
 *.exe
 *.docx
 Word\ To\ Markup\ Converter/Word\ To\ Markup\ Converter/bin
+Word\ To\ Markup\ Converter/packages/
 Word\ To\ Markup\ Converter/Word\ To\ Markup\ Converter/obj
+Word\ To\ Markup\ Converter/Word\ To\ Markup\ Converter/packages.config
 TestConverter/TestConverter/bin
 TestConverter/TestConverter/obj
 *.suo
