@@ -26,7 +26,8 @@ namespace Word_To_Markup_Converter.Module
         protected string h4TagEnd;
         protected string h5TagStart;
         protected string h5TagEnd;
-
+        protected string pTagStart;
+        protected string pTagEnd;
                  
         [STAThread]
         public string generateMarkup(string fileName)
@@ -151,28 +152,27 @@ namespace Word_To_Markup_Converter.Module
             formattedHTML.Remove(html.IndexOf("<!--EndFragment-->"), html.Length - 1 - html.IndexOf("<!--EndFragment-->"));
             formattedHTML.Remove(0, html.IndexOf("<!--StartFragment-->") + "<!--StartFragment-->".Length);
 
-            //remove <o:b> tags
+            //remove <o:[whatever]> tags
             formattedHTML.Replace("<o:p>", "");
-            formattedHTML.Replace("</o:p>", "");
+            formattedHTML.Replace("</o:p>", "");                    
 
-
-            
-            
-
+            //start replacing all the weird formatting that word puts in. Iterate through each para and get rid of things only if the p doesn't contain <pre> tags
+            //TODO: place the logic for working with pre tag based stuff.
             while (formattedHTML.ToString().IndexOf("<p class=") != -1)
             {
                 int start = formattedHTML.ToString().IndexOf("<p class=");
-                int end = formattedHTML.ToString().IndexOf(">", start);            
-
-                formattedHTML.Remove(start, end - start);
-                formattedHTML.Insert(start, "<p");                
+                int end = formattedHTML.ToString().IndexOf(">", start);
+                formattedHTML.Replace("\r\n", " ", start, formattedHTML.ToString().IndexOf("</p>", start) + "</p>".Length + 1 - start);
+                formattedHTML.Remove(start, end + 1 - start);
+                formattedHTML.Insert(start, "<p>");                
                 while (formattedHTML.ToString().IndexOf("<b style=") != -1)
                 {
                     start = formattedHTML.ToString().IndexOf("<b style=");
                     end = formattedHTML.ToString().IndexOf(">", start);
 
-                    formattedHTML.Remove(start, end - start);
-                    formattedHTML.Insert(start, "<b");
+                    formattedHTML.Remove(start, end + 1 - start);
+                    formattedHTML.Insert(start, boldTagStart);
+                    formattedHTML.Replace("</b>", boldTagEnd, start, formattedHTML.ToString().IndexOf("</b>", start) + "</b>".Length + 1 - start);
                 }
 
                 while (formattedHTML.ToString().IndexOf("<i style=") != -1)
@@ -180,15 +180,16 @@ namespace Word_To_Markup_Converter.Module
                     start = formattedHTML.ToString().IndexOf("<i style=");
                     end = formattedHTML.ToString().IndexOf(">", start);
 
-                    formattedHTML.Remove(start, end - start);
-                    formattedHTML.Insert(start, "<i");
+                    formattedHTML.Remove(start, end + 1 - start);
+                    formattedHTML.Insert(start, "<i>");
+                    formattedHTML.Insert(start, italicTagStart);
+                    formattedHTML.Replace("</i>", italicTagEnd, start, formattedHTML.ToString().IndexOf("</i>", start) + "</i>".Length + 1 - start);
                 }
+                
+                //formattedHTML.Replace("<b>", boldTagStart);
+                //formattedHTML.Replace("</b>", boldTagEnd);
 
-                formattedHTML.Replace("<b>", boldTagStart);
-                formattedHTML.Replace("</b>", boldTagEnd);
-
-                formattedHTML.Replace("<i>", italicTagStart);
-                formattedHTML.Replace("</i>", italicTagEnd);
+                
             }            
 
             while (formattedHTML.ToString().IndexOf("<table class=") != -1)
