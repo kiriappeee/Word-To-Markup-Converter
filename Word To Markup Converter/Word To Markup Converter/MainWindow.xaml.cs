@@ -35,11 +35,6 @@ namespace Word_To_Markup_Converter
             saveNewFile.FileOk += new System.ComponentModel.CancelEventHandler(saveNewFile_FileOk);
         }
 
-        private void Window_Loaded(object sender, RoutedEventArgs e)
-        {
-
-        }
-
         private void btnGenerateMarkup_Click(object sender, RoutedEventArgs e)
         {
             if (txtDocumentName.Text != String.Empty)
@@ -48,14 +43,16 @@ namespace Word_To_Markup_Converter
                 if ((bool)rbtnHTML.IsChecked)
                 {
                     generator = new HTMLGenerator();                    
-                    writer.Write(((HTMLGenerator)generator).generateMarkup(txtDocumentName.Text, txtHeaderTextPath.Text, txtFooterTextPath.Text, txtDocumentTitle.Text));                 
+                   ((HTMLGenerator)generator).generateMarkup(txtDocumentName.Text, txtHeaderTextPath.Text, txtFooterTextPath.Text, txtDocumentTitle.Text);                 
+                     
                     System.Diagnostics.Process.Start(txtSavePath.Text);                    
                 }
                 else if ((bool)rbtnMarkDown.IsChecked)
                 {
                     generator = new MarkdownGenerator();
-                    writer.Write(generator.generateMarkup(txtDocumentName.Text));
+                    generator.generateMarkup(txtDocumentName.Text);                    
                 }
+                writer.Write(generator.docText.ToString());
                 writer.Close();
                 MessageBox.Show("File Generation Complete");
             }

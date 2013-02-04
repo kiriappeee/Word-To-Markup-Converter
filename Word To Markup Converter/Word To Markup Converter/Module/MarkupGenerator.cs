@@ -2,296 +2,305 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Word=Microsoft.Office.Interop.Word;
 using System.Xml.Linq;
 using System.Windows;
 using System.Collections;
 using System.Text.RegularExpressions;
+using System.Xml;
+using Ionic.Zip;
+using System.IO;
 namespace Word_To_Markup_Converter.Module
 {
     public abstract class MarkupGenerator
     {
-        protected string finalHTML;
-        protected string boldTagStart;
-        protected string boldTagEnd;
-        protected string italicTagStart;
-        protected string italicTagEnd;
-        protected string h1TagStart;
-        protected string h1TagEnd;
-        protected string h2TagStart;
-        protected string h2TagEnd;
-        protected string h3TagStart;
-        protected string h3TagEnd;
-        protected string h4TagStart;
-        protected string h4TagEnd;
-        protected string h5TagStart;
-        protected string h5TagEnd;
-        protected string pTagStart;
-        protected string pTagEnd;
-        protected string uliTagStart;
-        protected string uliTagEnd;
-        protected string ulTagStart;
-        protected string ulTagEnd;
-        protected string olTagStart;
-        protected string olTagEnd;
-        protected string oliTagStart;
-        protected string oliTagEnd;
-         
-        [STAThread]
-        public string generateMarkup(string fileName)
+        public StringBuilder docText = new StringBuilder();
+
+        protected Tuple<string, string> boldTag;
+        protected Tuple<string, string> italicTag;
+        protected Tuple<string, string> pTag;
+        protected Tuple<string, string> header1Tag;
+        protected Tuple<string, string> header2Tag;
+        protected Tuple<string, string> header3Tag;
+        protected Tuple<string, string> header4Tag;
+        protected Tuple<string, string> header5Tag;
+        protected Tuple<string, string> header6Tag;
+        protected Tuple<string, string> unorderedListTag;
+        protected Tuple<string, string> orderedListTag;
+        protected Tuple<string, string> unorderedListItemTag;
+        protected Tuple<string, string> orderedListItemTag;
+
+        protected const int LIST_TYPE_UNORDERED = 3;
+        protected const int LIST_TYPE_ORDERED = 4;
+
+        public virtual void generateMarkup(String documentPath)
         {
-            Word.Application app = new Word.Application();
-            Word.Document doc = new Word.Document();
-            
-            doc = app.Documents.Open(fileName, Type.Missing, true);
-            Word.ListParagraphs listpara = doc.ListParagraphs;
-            IEnumerator ienum = doc.ListParagraphs.GetEnumerator();
+                        
+            string extractPath = documentPath + System.IO.Path.GetFileName(documentPath) + " open xml";
 
-            List<string> listString = new List<string>();            
-            
-            
-            List<Tuple<string, Word.WdListType, int>> items = new List<Tuple<string, Word.WdListType, int>>();
-
-            while (ienum.MoveNext())
+            ZipFile zip = ZipFile.Read(documentPath);
+            foreach (ZipEntry e in zip)
             {
-                Word.Range r = ((Word.Paragraph)ienum.Current).Range;
-                items.Add(new  Tuple<string, Word.WdListType, int>(r.Text, r.ListFormat.ListType, r.ListFormat.ListLevelNumber));
+                e.Extract(extractPath, true);
             }
 
-            items.Reverse();
-            if (items.Count > 0)
-            {
-                listString = createList(items);
-            }               
-            doc.SelectAllEditableRanges();
-            doc.Range().Copy();
+            string xmlDocPath = extractPath + "\\word\\document.xml";
 
-            string returnHTMLText = null;
+            int currentListLevel = -1;
+            int currentListType = -1;
+            Stack<Tuple<int, int>> listStack = new Stack<Tuple<int, int>>();
 
+            XmlDocument doc = new XmlDocument();
 
-
-
-            if (Clipboard.ContainsText(TextDataFormat.Html))
-            {
-                Console.WriteLine("html");
-                returnHTMLText = Clipboard.GetText(TextDataFormat.Html);
-                //Console.WriteLine(returnHTMLText);
-                finalHTML = stripClasses(returnHTMLText, listString);
-                
-
-            }
-            else
-            {
-                Console.WriteLine("no html");
-                returnHTMLText = "";
-                //Console.WriteLine(doc.);
-                //returnHTMLText = Clipboard.GetText(TextDataFormat.Html);                
-            }
-
-            doc.Close();
-            app.Quit();
-            Console.WriteLine("closed");
-            return finalHTML;
-
-        }
-
-        private List<Tuple<List<string>,int>> createList(List<Tuple<string, Word.WdListType, int>> items)
-        {
-            int currentIndex = 1;
+            XmlNamespaceManager namespaceManager = new XmlNamespaceManager(doc.NameTable);
             
-            List<string> listStrings = new List<string>();
-            int count = 0;
-            List<Tuple<List<string>, int>> listCollection = new List<Tuple<List<string>, int>>();
-
-            StringBuilder str = new StringBuilder();
-            Word.WdListType currentType = items[0].Item2;
+            namespaceManager.AddNamespace("w", "http://schemas.openxmlformats.org/wordprocessingml/2006/main");
+            doc.Load(xmlDocPath);
             
-            str.Append(closeOpenStyle(items[0].Item2, true));
-            foreach (Tuple<string, Word.WdListType, int> item in items)
+            // get the body of the document.
+            XmlNode body = doc.SelectSingleNode("//w:body", namespaceManager);
+
+            //get all the children of the body
+            XmlNodeList bodyItems = body.ChildNodes;
+            StringBuilder textToAppend = new StringBuilder();
+            StringBuilder paraTextToAppend = new StringBuilder();
+            foreach (XmlNode item in bodyItems)
             {
-                //check if the list type has changed. Append the close tag and the open tag
-                if (currentType != item.Item2)
+                //check if the item is a paragraph or a table
+                if (item.LocalName == "p")
                 {
-                    str.Append(closeOpenStyle(currentType, false));
-                    listStrings.Add(str.ToString());
-                    str.Clear();
-                    str.Append(closeOpenStyle(item.Item2, true));
-                    currentType = item.Item2;
-                }
-
-                //check the level
-                if (item.Item3 > currentIndex)
-                {
-                    str.Append(closeOpenStyle(currentType, true));
-                    currentIndex = item.Item3;
-                }
-                else if (item.Item3 < currentIndex)
-                {
-                    str.Append(closeOpenStyle(currentType, false));
-                    currentIndex = item.Item3;
-                }
-
-                //append the list item
-                if (currentType == Word.WdListType.wdListBullet)
-                {
-                    str.Append(uliTagStart + item.Item1.Replace("\r", "") + uliTagEnd +"\n");
-                }
-                else
-                {
-                    str.Append(oliTagStart + item.Item1.Replace("\r", "") + oliTagEnd + "\n");
-                }
-            }
-
-            str.Append(closeOpenStyle(currentType, false));
-            listStrings.Add(str.ToString());
-            return listStrings;
-        }
-
-        private string closeOpenStyle(Word.WdListType listType, bool isOpening)
-        {
-            if (listType == Word.WdListType.wdListBullet)
-            {
-                if (isOpening)
-                    return ulTagStart;
-                else
-                    return ulTagEnd;
-            }
-            else
-            {
-                if (isOpening)
-                    return olTagStart;
-                else
-                    return olTagEnd;                
-            }
-        }
-
-        private string stripClasses(string html, List<string> listItems)
-        {
-            StringBuilder formattedHTML = new StringBuilder(html);
-            formattedHTML.Remove(html.IndexOf("<!--EndFragment-->"), html.Length - 1 - html.IndexOf("<!--EndFragment-->"));
-            formattedHTML.Remove(0, html.IndexOf("<!--StartFragment-->") + "<!--StartFragment-->".Length);
-
-            //remove <o:[whatever]> tags
-            formattedHTML.Replace("<o:p>", "");
-            formattedHTML.Replace("</o:p>", "");
-            formattedHTML.Replace("<h1>", h1TagStart);
-            formattedHTML.Replace("</h1>", h1TagEnd);
-            formattedHTML.Replace("<h2>", h2TagStart);
-            formattedHTML.Replace("</h2>", h2TagEnd);
-            formattedHTML.Replace("<h3>", h3TagStart);
-            formattedHTML.Replace("</h3>", h3TagEnd);
-
-            //replace the lists
-            int listItemPos = 0;
-            
-            //while (formattedHTML.ToString().IndexOf("<p><![if !supportLists]>") != -1)
-            while (Regex.Match(formattedHTML.ToString(), @"<p[a-z 0-9 A-Z='-:.;]+><!\[if !supportLists").Success)
-            {
-                //check how many items there are in the list (this tells us how many paragraphs to get rid of
-                int itemCount = Regex.Matches(listItems[listItemPos], @"<li>").Count;
-                //int itemCount = listItems[listItemPos].Count(f => f.Equals("<li>"));
-
-                int mainStart = -1;
-                //remove that many blocks of list items.
-                for (int i = 0; i < itemCount; i++)
-                {
-                    int start = Regex.Match(formattedHTML.ToString(), @"<p[a-z 0-9 A-Z='-:.;]+><!\[if !supportLists").Index;
-                    int end = formattedHTML.ToString().IndexOf("</p>", start);
-                    if (mainStart == -1)
+                    textToAppend.Clear();       //use a string builder here since there can be multiple w:r tags to iterate through in a single paragraph. 
+                    XmlNodeList paraTexts = item.SelectNodes("w:r", namespaceManager);
+                    foreach (XmlNode textBlock in paraTexts)
                     {
-                        mainStart = start;
+                        paraTextToAppend.Clear();
+                        //get the text within the particular block
+                        paraTextToAppend.Append(textBlock.SelectSingleNode("w:t", namespaceManager).InnerText);
+
+                        //search for any formatting and apply it
+                        if (textBlock.SelectSingleNode("w:rPr", namespaceManager) != null)
+                        {
+                            XmlNodeList styleNodes = textBlock.SelectSingleNode("w:rPr", namespaceManager).ChildNodes;
+                            foreach (XmlNode styleNode in styleNodes)
+                            {
+                                //this method can be extended in the future to incorporate any other styling that might come along such as strike through lines. 
+                                if (styleNode.LocalName == "b")
+                                    formatBold(paraTextToAppend);
+                                else if (styleNode.LocalName == "i")
+                                    formatItalic(paraTextToAppend);
+                            }
+                        }
+                        textToAppend.Append(paraTextToAppend.ToString());
                     }
-                    formattedHTML.Remove(start, end - start + "</p>".Length);
+
+                    //check if we are dealing with a special kind of paragraph
+                    if (item.SelectSingleNode("w:pPr", namespaceManager) != null)
+                    {                        
+
+                        //logic for dealing with special paragraphs
+                        if (item.SelectSingleNode("w:pPr/w:pStyle", namespaceManager).Attributes.GetNamedItem("w:val").Value.Contains("Heading"))
+                        {                            
+                            //logic for header
+                            formatHeader(textToAppend, item.SelectSingleNode("w:pPr/w:pStyle", namespaceManager).Attributes.GetNamedItem("w:val").Value);
+                        }
+
+                        //logic for dealing with list items
+                        if (item.SelectSingleNode("w:pPr/w:pStyle", namespaceManager).Attributes.GetNamedItem("w:val").Value.Contains("ListParagraph"))
+                        {
+                            //get the index of the item being inserted. 
+                            int insertListLevel = Convert.ToInt16(item.SelectSingleNode("w:pPr/w:numPr/w:ilvl", namespaceManager).Attributes.GetNamedItem("w:val").Value);
+                            int insertListType = Convert.ToInt16(item.SelectSingleNode("w:pPr/w:numPr/w:numId", namespaceManager).Attributes.GetNamedItem("w:val").Value);
+
+                            //list insertion has not begun yet
+                            if (listStack.Count == 0)
+                            {
+                                currentListLevel = insertListLevel;
+                                currentListType = insertListType;
+                                listStack.Push(new Tuple<int, int>(currentListLevel, currentListType));
+                                formatListItemOpener(textToAppend, currentListLevel, currentListType);
+                                formatListOpener(textToAppend, currentListLevel, currentListType);
+                            }
+                            else
+                            {
+                                //logic for when coming out of a sublist block
+                                if (currentListLevel > insertListLevel)
+                                {
+                                    while (currentListLevel != insertListLevel || currentListType != insertListType)
+                                    {
+                                        formatListItemCloser(textToAppend, currentListLevel, currentListType);
+                                        formatListCloser(textToAppend, currentListLevel, currentListType);
+                                        listStack.Pop();
+                                        currentListLevel = listStack.Peek().Item1;
+                                        currentListType = listStack.Peek().Item2;
+                                    }
+                                }
+                               
+                                if (currentListLevel == insertListLevel)
+                                {
+                                    int tempListLevel = currentListLevel;
+                                    int tempListType = currentListType;
+                                    
+                                    //check if the list is the same list or whether a new one is opening
+                                    if (currentListType == insertListType)   //same list
+                                    {
+                                        formatListItemOpener(textToAppend, currentListLevel, currentListType);
+                                    }
+                                    else
+                                    {
+                                        formatListCloser(textToAppend, currentListLevel, currentListType);
+                                        listStack.Pop();
+                                        currentListLevel = insertListLevel;
+                                        currentListType = insertListType;
+                                        listStack.Push(new Tuple<int, int>(currentListLevel, currentListType));
+                                    }
+                                    formatListItemCloser(textToAppend, tempListLevel, tempListType);
+                                }
+                                else if (currentListLevel < insertListLevel)
+                                {
+                                    currentListLevel = insertListLevel;
+                                    currentListType = insertListType;
+                                    listStack.Push(new Tuple<int, int>(currentListLevel, currentListType));
+                                    formatListItemOpener(textToAppend, currentListLevel, currentListType);
+                                    formatListOpener(textToAppend, currentListLevel, currentListType);
+                                }                                
+                            }                            
+                        }
+
+                    }
+                    else
+                    {
+                        while (listStack.Count != 0)
+                        {
+                            currentListLevel = listStack.Peek().Item1;
+                            currentListType = listStack.Peek().Item2;
+                            formatListItemCloser(textToAppend, currentListLevel, currentListType);
+                            formatListCloser(textToAppend, currentListLevel, currentListType);
+                            listStack.Pop();                            
+                        }
+
+                        formatParagraph(textToAppend);
+                    }
+
+                    
+                    docText.Append(textToAppend.ToString());
+                }
+                else if (item.LocalName == "tbl")
+                {
+                    //insert the logic for dealing with any kind of table. The reason I didn't write a blanket else 
+                    //is because I don't know if there could be any other kind of nodes
                 }
 
-                //insert the new string
-                formattedHTML.Insert(mainStart, listItems[listItemPos]);
-                listItemPos++;
-                mainStart = -1;                             
+                
             }
-
-            //start replacing all the weird formatting that word puts in. Iterate through each para and get rid of things only if the p doesn't contain <pre> tags
-            //TODO: place the logic for working with pre tag based stuff.
-            while (formattedHTML.ToString().IndexOf("<p class=") != -1)
+            textToAppend = new StringBuilder();
+            while (listStack.Count != 0)
             {
-                
-                int start = formattedHTML.ToString().IndexOf("<p class=");
-                int end = formattedHTML.ToString().IndexOf(">", start);
-                formattedHTML.Replace("\r\n", " ", start, formattedHTML.ToString().IndexOf("</p>", start) + "</p>".Length + 1 - start);
-                formattedHTML.Remove(start, end + 1 - start);
-                formattedHTML.Insert(start, pTagStart);
-                
-                while (formattedHTML.ToString().IndexOf("<b style=") != -1)
-                {
-                    start = formattedHTML.ToString().IndexOf("<b style=");
-                    end = formattedHTML.ToString().IndexOf(">", start);
 
-                    formattedHTML.Remove(start, end + 1 - start);
-                    formattedHTML.Insert(start, boldTagStart);
-                    formattedHTML.Replace("</b>", boldTagEnd, start, formattedHTML.ToString().IndexOf("</b>", start) + "</b>".Length + 1 - start);
-                }
-
-                while (formattedHTML.ToString().IndexOf("<i style=") != -1)
-                {
-                    start = formattedHTML.ToString().IndexOf("<i style=");
-                    end = formattedHTML.ToString().IndexOf(">", start);
-
-                    formattedHTML.Remove(start, end + 1 - start);
-                    formattedHTML.Insert(start, "<i>");
-                    formattedHTML.Insert(start, italicTagStart);
-                    formattedHTML.Replace("</i>", italicTagEnd, start, formattedHTML.ToString().IndexOf("</i>", start) + "</i>".Length + 1 - start);
-                }
-                
-                //formattedHTML.Replace("<b>", boldTagStart);
-                //formattedHTML.Replace("</b>", boldTagEnd);
-
-                
+                currentListLevel = listStack.Peek().Item1;
+                currentListType = listStack.Peek().Item2;
+                formatListItemCloser(textToAppend, currentListLevel, currentListType);
+                formatListCloser(textToAppend, currentListLevel, currentListType);
+                listStack.Pop();
             }
-            formattedHTML.Replace("</p>", pTagEnd);
-            while (formattedHTML.ToString().IndexOf("<table class=") != -1)
-            {
-                int start = formattedHTML.ToString().IndexOf("<table class=");
-                int end = formattedHTML.ToString().IndexOf(">", start);
-
-                formattedHTML.Remove(start, end - start);
-                formattedHTML.Insert(start, "<table");
-
-                while (formattedHTML.ToString().IndexOf("<tr style=") != -1)
-                {
-                    start = formattedHTML.ToString().IndexOf("<tr style=");
-                    end = formattedHTML.ToString().IndexOf(">", start);
-
-                    formattedHTML.Remove(start, end - start);
-                    formattedHTML.Insert(start, "<tr");
-                }
-
-                while (formattedHTML.ToString().IndexOf("<td width=") != -1)
-                {
-                    start = formattedHTML.ToString().IndexOf("<td width=");
-                    end = formattedHTML.ToString().IndexOf(">", start);
-
-                    formattedHTML.Remove(start, end - start);
-                    formattedHTML.Insert(start, "<td");
-                }
-
-            }
-
-            
-
-            
-
-            
-
-            formattedHTML.Replace("<p>&nbsp;</p>", "");
-            Console.WriteLine();
-            Console.WriteLine();
-            Console.WriteLine();
-            Console.WriteLine();
-            Console.WriteLine(formattedHTML);           
-            
-            //Clipboard.SetText(doc.ToString().Replace("<br />", "<br>").Trim());
-            return formattedHTML.ToString().Replace("<br />", "<br>").Trim();
+            docText.Append(textToAppend.ToString());
+            Directory.Delete(extractPath, true);
         }
-        
-    }
+
+        protected virtual void formatParagraph(StringBuilder textToAppend)
+        {
+            textToAppend.Insert(0, pTag.Item1);
+            textToAppend.Append(pTag.Item2);
+        }
+
+        protected virtual void formatListItemOpener(StringBuilder textToAppend, int currentListLevel, int currentListType)
+        {
+            if (currentListType == LIST_TYPE_UNORDERED)
+            {
+                textToAppend.Insert(0, unorderedListItemTag.Item1);
+            }
+            else if (currentListType == LIST_TYPE_ORDERED)
+            {
+                textToAppend.Insert(0, orderedListItemTag.Item1);
+            }
+        }
+
+        protected virtual void formatListItemCloser(StringBuilder textToAppend, int currentListLevel, int currentListType)
+        {
+            if (currentListType == LIST_TYPE_UNORDERED)
+            {                
+                textToAppend.Insert(0, unorderedListItemTag.Item2);
+            }
+            else if (currentListType == LIST_TYPE_ORDERED)
+            {
+                textToAppend.Insert(0, orderedListItemTag.Item2);
+            }
+        }
+
+        protected virtual void formatListCloser(StringBuilder textToAppend, int insertListLevel, int listType)
+        {
+            if (listType == LIST_TYPE_UNORDERED)
+            {
+                textToAppend.Append(unorderedListTag.Item2);
+            }
+            else if (listType == LIST_TYPE_ORDERED)
+            {
+                textToAppend.Append(orderedListTag.Item2);
+            }
+        }
+
+        protected virtual void formatListOpener(StringBuilder textToAppend, int insertListLevel, int listType)
+        {
+            if (listType == LIST_TYPE_UNORDERED)
+            {
+                textToAppend.Insert(0, unorderedListTag.Item1);
+            }
+            else if (listType == LIST_TYPE_ORDERED)
+            {
+                textToAppend.Insert(0, orderedListTag.Item1);
+            }
+        }
+
+        protected virtual void formatHeader(StringBuilder textToAppend, string headerType)
+        {
+            switch(headerType)
+            {
+                case "Heading1":
+                    textToAppend.Insert(0, header1Tag.Item1);
+                    textToAppend.Append(header1Tag.Item2);
+                    break;
+                case "Heading2":
+                    textToAppend.Insert(0, header2Tag.Item1);
+                    textToAppend.Append(header2Tag.Item2);
+                    break;
+                case "Heading3":
+                    textToAppend.Insert(0, header3Tag.Item1);
+                    textToAppend.Append(header3Tag.Item2);
+                    break;
+                case "Heading4":
+                    textToAppend.Insert(0, header4Tag.Item1);
+                    textToAppend.Append(header4Tag.Item2);
+                    break;
+                case "Heading5":
+                    textToAppend.Insert(0, header5Tag.Item1);
+                    textToAppend.Append(header5Tag.Item2);
+                    break;
+                case "Heading6":
+                    textToAppend.Insert(0, header6Tag.Item1);
+                    textToAppend.Append(header6Tag.Item2);
+                    break;
+            }
+        }
+
+        protected virtual void formatItalic(StringBuilder textToAppend)
+        {
+            textToAppend.Insert(0, italicTag.Item1);
+            textToAppend.Append(italicTag.Item2);
+        }
+
+        protected virtual void formatBold(StringBuilder textToAppend)
+        {
+            textToAppend.Insert(0, boldTag.Item1);
+            textToAppend.Append(boldTag.Item2);
+        }
+    }       
+    
 }

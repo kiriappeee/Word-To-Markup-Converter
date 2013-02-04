@@ -2,8 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:Controls="clr-namespace:MahApps.Metro.Controls;assembly=MahApps.Metro"
-        Title="Markup generator" Height="350"  Width="800" Grid.IsSharedSizeScope="True"
-        Loaded="Window_Loaded">
+        Title="Markup generator" Height="350"  Width="800" Grid.IsSharedSizeScope="True">
 
     <Window.Resources>
         <ResourceDictionary>
@@ -203,7 +202,7 @@
                         <Label Content="Header Text File" Margin="4" Grid.Column="0"/>
                         <TextBox Name="txtHeaderTextPath" Margin="4" Grid.Column="1"/>
                         <Button Name="btnOpenHeader" Margin="4" Grid.Column="2" Content="Select File" 
-                                Click="Window_Loaded"/>
+                                />
                     </Grid>
                     <Grid Grid.Row="4" Margin="4">
                         <Grid.ColumnDefinitions>

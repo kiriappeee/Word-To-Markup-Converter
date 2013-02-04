@@ -2,70 +2,43 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Word = Microsoft.Office.Interop.Word;
 using System.Xml.Linq;
+
 namespace Word_To_Markup_Converter.Module
 {
     public class HTMLGenerator : MarkupGenerator
     {
-        public HTMLGenerator() : base()
+        public HTMLGenerator()
         {
-            boldTagStart = "<strong>";
-            boldTagEnd = "</strong>";
-            italicTagStart = "<em>";
-            italicTagEnd = "</em>";
-            h1TagStart = "<h1>";
-            h1TagEnd = "</h1>";
-            h2TagStart = "<h2>";
-            h2TagEnd = "</h2>";
-            h3TagStart = "<h3>";
-            h4TagEnd = "</h3>";
-            pTagStart = "<p>";
-            pTagEnd = "</p>";
+            pTag = new Tuple<string, string>("<p>", "</p>\n");
+
+            boldTag = new Tuple<string, string>("<strong>", "</strong>");
+            italicTag = new Tuple<string, string>("<em>", "</em>");
+
+            unorderedListTag = new Tuple<string, string>("<ul>\n", "</ul>\n");
+            orderedListTag = new Tuple<string, string>("<ol>\n", "</ol>\n");
+
+            unorderedListItemTag = orderedListItemTag = new Tuple<string, string>("<li>", "</li>\n");
+
+            header1Tag = new Tuple<string, string>("<h1>", "</h1>\n");
+            header2Tag = new Tuple<string, string>("<h2>", "</h2>\n");
+            header3Tag = new Tuple<string, string>("<h3>", "</h3>\n");
+            header4Tag = new Tuple<string, string>("<h4>", "</h4>\n");
+            header5Tag = new Tuple<string, string>("<h5>", "</h5>\n");
+            header6Tag = new Tuple<string, string>("<h6>", "</h6>\n");
         }
-        public string generateMarkup(string fileName, string headerFile, string footerFile, string title)
+
+        public void generateMarkup(String documentPath, String headerPath, String footerPath, String documentTitle)
         {
-            
-            base.generateMarkup(fileName);
-            StringBuilder html = new StringBuilder(finalHTML);
+            base.generateMarkup(documentPath);
+            docText.Insert(0, "<body>\n").Append("</body>");
+        }
 
-            html.Insert(0, "<body>");
-            html.Insert(html.Length, "</body>");
-            XDocument xdoc = XDocument.Parse(html.ToString().Replace("\v", "<br />").Replace("\r", ""));
-            finalHTML = xdoc.ToString().Trim();
+        public override void generateMarkup(String documentPath)
+        {
+            base.generateMarkup(documentPath);
 
-            Word.Application app = new Word.Application();
-            Word.Document doc = new Word.Document();
-            if (headerFile != "")
-            {
-                doc = app.Documents.Open(headerFile, Type.Missing, true);
-                html.Insert(0, doc.Range().Text);
-                doc.Close();
-            }
-            else
-            {
-                html.Insert(0, String.Format(@"
-<!DOCTYPE html>
- <head>
-  <title> {0} </title>
- </head>
- ", title));
-            }
-
-            if (footerFile != "")
-            {
-                doc = app.Documents.Open(footerFile, Type.Missing, true);
-                html.Insert(html.Length, doc.Range().Text);
-                doc.Close();
-            }
-            else
-            {
-                html.Insert(html.Length, @"
-
-</html>");
-            }
-            app.Quit();
-            return finalHTML;
+            docText.Insert(0, "<body>\n").Append("</body>");
         }
     }
 }
