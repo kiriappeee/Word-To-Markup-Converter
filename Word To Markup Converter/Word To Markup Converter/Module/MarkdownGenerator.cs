@@ -21,12 +21,12 @@ namespace Word_To_Markup_Converter.Module
             unorderedListItemTag = new Tuple<string, string>("* ", "\n");
             orderedListItemTag = new Tuple<string, string>("1. ", "\n");
 
-            header1Tag = new Tuple<string, string>("#", "#\n");
-            header2Tag = new Tuple<string, string>("##", "##\n");
-            header3Tag = new Tuple<string, string>("###", "###\n");
-            header4Tag = new Tuple<string, string>("####", "####\n");
-            header5Tag = new Tuple<string, string>("#####", "#####\n");
-            header6Tag = new Tuple<string, string>("######", "######\n");
+            header1Tag = new Tuple<string, string>("\n#", "#\n");
+            header2Tag = new Tuple<string, string>("\n##", "##\n");
+            header3Tag = new Tuple<string, string>("\n###", "###\n");
+            header4Tag = new Tuple<string, string>("\n####", "####\n");
+            header5Tag = new Tuple<string, string>("\n#####", "#####\n");
+            header6Tag = new Tuple<string, string>("\n######", "######\n");
         }
 
 

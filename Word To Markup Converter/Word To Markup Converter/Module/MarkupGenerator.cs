@@ -74,7 +74,7 @@ namespace Word_To_Markup_Converter.Module
                     {
                         paraTextToAppend.Clear();
                         //get the text within the particular block
-                        paraTextToAppend.Append(textBlock.SelectSingleNode("w:t", namespaceManager).InnerText);
+                        paraTextToAppend.Append(textBlock.SelectSingleNode("w:t", namespaceManager).InnerXml);
 
                         //search for any formatting and apply it
                         if (textBlock.SelectSingleNode("w:rPr", namespaceManager) != null)
@@ -101,6 +101,15 @@ namespace Word_To_Markup_Converter.Module
                         {                            
                             //logic for header
                             formatHeader(textToAppend, item.SelectSingleNode("w:pPr/w:pStyle", namespaceManager).Attributes.GetNamedItem("w:val").Value);
+                            
+                            while (listStack.Count != 0)
+                            {
+                                currentListLevel = listStack.Peek().Item1;
+                                currentListType = listStack.Peek().Item2;
+                                formatListCloser(textToAppend, currentListLevel, currentListType);
+                                formatListItemCloser(textToAppend, currentListLevel, currentListType);
+                                listStack.Pop();
+                            }
                         }
 
                         //logic for dealing with list items
@@ -126,8 +135,8 @@ namespace Word_To_Markup_Converter.Module
                                 {
                                     while (currentListLevel != insertListLevel || currentListType != insertListType)
                                     {
-                                        formatListItemCloser(textToAppend, currentListLevel, currentListType);
                                         formatListCloser(textToAppend, currentListLevel, currentListType);
+                                        formatListItemCloser(textToAppend, currentListLevel, currentListType);
                                         listStack.Pop();
                                         currentListLevel = listStack.Peek().Item1;
                                         currentListType = listStack.Peek().Item2;
@@ -172,8 +181,8 @@ namespace Word_To_Markup_Converter.Module
                         {
                             currentListLevel = listStack.Peek().Item1;
                             currentListType = listStack.Peek().Item2;
-                            formatListItemCloser(textToAppend, currentListLevel, currentListType);
                             formatListCloser(textToAppend, currentListLevel, currentListType);
+                            formatListItemCloser(textToAppend, currentListLevel, currentListType);
                             listStack.Pop();                            
                         }
 
@@ -239,11 +248,11 @@ namespace Word_To_Markup_Converter.Module
         {
             if (listType == LIST_TYPE_UNORDERED)
             {
-                textToAppend.Append(unorderedListTag.Item2);
+                textToAppend.Insert(0, unorderedListTag.Item2);
             }
             else if (listType == LIST_TYPE_ORDERED)
             {
-                textToAppend.Append(orderedListTag.Item2);
+                textToAppend.Insert(0, orderedListTag.Item2);
             }
         }
 
