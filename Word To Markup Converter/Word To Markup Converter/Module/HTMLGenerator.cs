@@ -14,6 +14,14 @@ namespace Word_To_Markup_Converter.Module
             boldTagEnd = "</strong>";
             italicTagStart = "<em>";
             italicTagEnd = "</em>";
+            h1TagStart = "<h1>";
+            h1TagEnd = "</h1>";
+            h2TagStart = "<h2>";
+            h2TagEnd = "</h2>";
+            h3TagStart = "<h3>";
+            h4TagEnd = "</h3>";
+            pTagStart = "<p>";
+            pTagEnd = "</p>";
         }
         public string generateMarkup(string fileName, string headerFile, string footerFile, string title)
         {

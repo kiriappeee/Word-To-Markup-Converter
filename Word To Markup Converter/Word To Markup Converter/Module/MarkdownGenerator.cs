@@ -14,7 +14,12 @@ namespace Word_To_Markup_Converter.Module
             h1TagStart = h1TagEnd = "#";
             h2TagStart = h2TagEnd = "##";
             h3TagStart = h3TagEnd = "###";
-
+            pTagStart = "\n";
+            pTagEnd = "";
+            ulTagStart = "\n";
+            ulTagEnd = "";
+            uliTagStart = "\t* ";
+            uliTagEnd = "";
         }
 
 

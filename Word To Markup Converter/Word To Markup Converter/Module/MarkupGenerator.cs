@@ -28,7 +28,15 @@ namespace Word_To_Markup_Converter.Module
         protected string h5TagEnd;
         protected string pTagStart;
         protected string pTagEnd;
-                 
+        protected string uliTagStart;
+        protected string uliTagEnd;
+        protected string ulTagStart;
+        protected string ulTagEnd;
+        protected string olTagStart;
+        protected string olTagEnd;
+        protected string oliTagStart;
+        protected string oliTagEnd;
+         
         [STAThread]
         public string generateMarkup(string fileName)
         {
@@ -87,10 +95,14 @@ namespace Word_To_Markup_Converter.Module
 
         }
 
-        private List<string> createList(List<Tuple<string, Word.WdListType, int>> items)
+        private List<Tuple<List<string>,int>> createList(List<Tuple<string, Word.WdListType, int>> items)
         {
             int currentIndex = 1;
+            
             List<string> listStrings = new List<string>();
+            int count = 0;
+            List<Tuple<List<string>, int>> listCollection = new List<Tuple<List<string>, int>>();
+
             StringBuilder str = new StringBuilder();
             Word.WdListType currentType = items[0].Item2;
             
@@ -120,7 +132,14 @@ namespace Word_To_Markup_Converter.Module
                 }
 
                 //append the list item
-                str.Append("<li>" + item.Item1.Replace("\r","") + "</li>\n");                
+                if (currentType == Word.WdListType.wdListBullet)
+                {
+                    str.Append(uliTagStart + item.Item1.Replace("\r", "") + uliTagEnd +"\n");
+                }
+                else
+                {
+                    str.Append(oliTagStart + item.Item1.Replace("\r", "") + oliTagEnd + "\n");
+                }
             }
 
             str.Append(closeOpenStyle(currentType, false));
@@ -133,16 +152,16 @@ namespace Word_To_Markup_Converter.Module
             if (listType == Word.WdListType.wdListBullet)
             {
                 if (isOpening)
-                    return "<ul>\n";
+                    return ulTagStart;
                 else
-                    return "</ul>\n";
+                    return ulTagEnd;
             }
             else
             {
                 if (isOpening)
-                    return "<ol>\n";
+                    return olTagStart;
                 else
-                    return "</ol>\n";                
+                    return olTagEnd;                
             }
         }
 
@@ -154,17 +173,54 @@ namespace Word_To_Markup_Converter.Module
 
             //remove <o:[whatever]> tags
             formattedHTML.Replace("<o:p>", "");
-            formattedHTML.Replace("</o:p>", "");                    
+            formattedHTML.Replace("</o:p>", "");
+            formattedHTML.Replace("<h1>", h1TagStart);
+            formattedHTML.Replace("</h1>", h1TagEnd);
+            formattedHTML.Replace("<h2>", h2TagStart);
+            formattedHTML.Replace("</h2>", h2TagEnd);
+            formattedHTML.Replace("<h3>", h3TagStart);
+            formattedHTML.Replace("</h3>", h3TagEnd);
+
+            //replace the lists
+            int listItemPos = 0;
+            
+            //while (formattedHTML.ToString().IndexOf("<p><![if !supportLists]>") != -1)
+            while (Regex.Match(formattedHTML.ToString(), @"<p[a-z 0-9 A-Z='-:.;]+><!\[if !supportLists").Success)
+            {
+                //check how many items there are in the list (this tells us how many paragraphs to get rid of
+                int itemCount = Regex.Matches(listItems[listItemPos], @"<li>").Count;
+                //int itemCount = listItems[listItemPos].Count(f => f.Equals("<li>"));
+
+                int mainStart = -1;
+                //remove that many blocks of list items.
+                for (int i = 0; i < itemCount; i++)
+                {
+                    int start = Regex.Match(formattedHTML.ToString(), @"<p[a-z 0-9 A-Z='-:.;]+><!\[if !supportLists").Index;
+                    int end = formattedHTML.ToString().IndexOf("</p>", start);
+                    if (mainStart == -1)
+                    {
+                        mainStart = start;
+                    }
+                    formattedHTML.Remove(start, end - start + "</p>".Length);
+                }
+
+                //insert the new string
+                formattedHTML.Insert(mainStart, listItems[listItemPos]);
+                listItemPos++;
+                mainStart = -1;                             
+            }
 
             //start replacing all the weird formatting that word puts in. Iterate through each para and get rid of things only if the p doesn't contain <pre> tags
             //TODO: place the logic for working with pre tag based stuff.
             while (formattedHTML.ToString().IndexOf("<p class=") != -1)
             {
+                
                 int start = formattedHTML.ToString().IndexOf("<p class=");
                 int end = formattedHTML.ToString().IndexOf(">", start);
                 formattedHTML.Replace("\r\n", " ", start, formattedHTML.ToString().IndexOf("</p>", start) + "</p>".Length + 1 - start);
                 formattedHTML.Remove(start, end + 1 - start);
-                formattedHTML.Insert(start, "<p>");                
+                formattedHTML.Insert(start, pTagStart);
+                
                 while (formattedHTML.ToString().IndexOf("<b style=") != -1)
                 {
                     start = formattedHTML.ToString().IndexOf("<b style=");
@@ -190,8 +246,8 @@ namespace Word_To_Markup_Converter.Module
                 //formattedHTML.Replace("</b>", boldTagEnd);
 
                 
-            }            
-
+            }
+            formattedHTML.Replace("</p>", pTagEnd);
             while (formattedHTML.ToString().IndexOf("<table class=") != -1)
             {
                 int start = formattedHTML.ToString().IndexOf("<table class=");
@@ -222,33 +278,7 @@ namespace Word_To_Markup_Converter.Module
 
             
 
-            //replace the lists
-            int listItemPos = 0;
-
-            while (formattedHTML.ToString().IndexOf("<p><![if !supportLists]>") != -1)
-            {
-                //check how many items there are in the list (this tells us how many paragraphs to get rid of
-                int itemCount = Regex.Matches(listItems[listItemPos], @"<li>").Count;
-                //int itemCount = listItems[listItemPos].Count(f => f.Equals("<li>"));
-                
-                int mainStart = -1;
-                //remove that many blocks of list items.
-                for (int i = 0; i < itemCount; i++)
-                {
-                    int start = formattedHTML.ToString().IndexOf("<p><![if !supportLists]>");
-                    int end = formattedHTML.ToString().IndexOf("</p>", start);
-                    if (mainStart == -1)
-                    {
-                        mainStart = start;
-                    }
-                    formattedHTML.Remove(start, end - start + "</p>".Length);
-                }
-
-                //insert the new string
-                formattedHTML.Insert(mainStart, listItems[listItemPos]);
-                listItemPos++;
-                mainStart = -1;
-            }
+            
 
             
 
