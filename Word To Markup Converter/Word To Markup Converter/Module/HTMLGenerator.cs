@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Xml.Linq;
+using System.IO;
 
 namespace Word_To_Markup_Converter.Module
 {
@@ -31,7 +32,10 @@ namespace Word_To_Markup_Converter.Module
         public void generateMarkup(String documentPath, String headerPath, String footerPath, String documentTitle)
         {
             base.generateMarkup(documentPath);
-            docText.Insert(0, "<body>\n").Append("</body>");
+            StreamReader headerReader = new StreamReader(headerPath);
+            StreamReader footerReader = new StreamReader(footerPath);
+
+            docText.Insert(0, headerReader.ReadToEnd()).Append(footerReader.ReadToEnd());
         }
 
         public override void generateMarkup(String documentPath)
@@ -39,6 +43,12 @@ namespace Word_To_Markup_Converter.Module
             base.generateMarkup(documentPath);
 
             docText.Insert(0, "<body>\n").Append("</body>");
+        }
+
+        protected override void formatLink(StringBuilder textToAppend, string link)
+        {
+            textToAppend.Insert(0, "<a href=\"" + link + "\">");
+            textToAppend.Append("</a>");
         }
     }
 }

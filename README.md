@@ -28,7 +28,7 @@ Features that are done
 
 Features that are in the immediate pipeline
 
-* Links within text (this is super super important)
+* Links within text (this is super super important) - **complete**
 * Tables (this is super important)
 * Support for &lt;pre&gt; tags (this is important… You get the idea)
 

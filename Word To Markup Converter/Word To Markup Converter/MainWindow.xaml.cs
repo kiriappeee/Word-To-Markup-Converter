@@ -24,14 +24,17 @@ namespace Word_To_Markup_Converter
     public partial class MainWindow : MetroWindow
     {
         private MarkupGenerator generator;
-        OpenFileDialog openOriginalFile;
+        OpenFileDialog openFile;
+        OpenFileDialog openHeaderFooter;
         SaveFileDialog saveNewFile;
+        private string openFileParent;
+
         public MainWindow()
         {
             InitializeComponent();
-            openOriginalFile = new OpenFileDialog();
+            openFile = new OpenFileDialog();
             saveNewFile = new SaveFileDialog();
-            openOriginalFile.FileOk += new System.ComponentModel.CancelEventHandler(openOriginalFile_FileOk);
+            openFile.FileOk += new System.ComponentModel.CancelEventHandler(openOriginalFile_FileOk);
             saveNewFile.FileOk += new System.ComponentModel.CancelEventHandler(saveNewFile_FileOk);
         }
 
@@ -42,8 +45,15 @@ namespace Word_To_Markup_Converter
                 StreamWriter writer = new StreamWriter(txtSavePath.Text);
                 if ((bool)rbtnHTML.IsChecked)
                 {
-                    generator = new HTMLGenerator();                    
-                   ((HTMLGenerator)generator).generateMarkup(txtDocumentName.Text, txtHeaderTextPath.Text, txtFooterTextPath.Text, txtDocumentTitle.Text);                 
+                    generator = new HTMLGenerator();
+                    if (txtHeaderTextPath.Text != "" && txtFooterTextPath.Text != "")
+                    {
+                        ((HTMLGenerator)generator).generateMarkup(txtDocumentName.Text, txtHeaderTextPath.Text, txtFooterTextPath.Text, txtDocumentTitle.Text);
+                    }
+                    else
+                    {
+                        ((HTMLGenerator)generator).generateMarkup(txtDocumentName.Text);
+                    }
                      
                     System.Diagnostics.Process.Start(txtSavePath.Text);                    
                 }
@@ -64,12 +74,25 @@ namespace Word_To_Markup_Converter
         }
 
         private void btnOpenOriginalFile_Click(object sender, RoutedEventArgs e)
-        {            
-            openOriginalFile.Filter ="Word Documents (*.doc, *docx)|*.docx;*.doc";
-            openOriginalFile.ShowDialog();
+        {
+            openFileParent = "ORIGINAL";
+            openFile.Filter ="Word Documents (*.doc, *docx)|*.docx;*.doc";
+            openFile.ShowDialog();
         }
 
-        
+        private void btnOpenFooter_Click(object sender, RoutedEventArgs e)
+        {
+            openFileParent = "FOOTER";
+            openFile.Filter = "HTML Documents (*.html, *.htm)|*.html;*htm";
+            openFile.ShowDialog();
+        }
+
+        private void btnOpenHeader_Click(object sender, RoutedEventArgs e)
+        {
+            openFileParent = "HEADER";
+            openFile.Filter = "HTML Documents (*.html, *.htm)|*.html;*htm";
+            openFile.ShowDialog();
+        }       
 
         private void btnOpenSaveFile_Click(object sender, RoutedEventArgs e)
         {
@@ -82,21 +105,30 @@ namespace Word_To_Markup_Converter
                 saveNewFile.Filter = "HTML Document (*.markdown, *.md)|*.markdown;*.md";
             }
             saveNewFile.ShowDialog();
-        }
-
-        private void btnOpenFooter_Click(object sender, RoutedEventArgs e)
-        {
-
-        }
+        }        
 
         void openOriginalFile_FileOk(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            txtDocumentName.Text = openOriginalFile.FileName;
+            switch (openFileParent)
+            {
+                case "ORIGINAL":
+                    txtDocumentName.Text = openFile.FileName;    
+                    break;
+                case "HEADER":
+                    txtHeaderTextPath.Text = openFile.FileName;
+                    break;
+                case "FOOTER":
+                    txtFooterTextPath.Text = openFile.FileName;
+                    break;
+            }
+            
         }
 
         void saveNewFile_FileOk(object sender, System.ComponentModel.CancelEventArgs e)
         {
             txtSavePath.Text = saveNewFile.FileName;
         }
+
+        
     }
 }

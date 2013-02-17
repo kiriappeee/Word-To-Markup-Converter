@@ -44,20 +44,22 @@ namespace Word_To_Markup_Converter.Module
             }
 
             string xmlDocPath = extractPath + "\\word\\document.xml";
-
+            string xmlrefDocPath = extractPath + @"\word\_rels\document.xml.rels";
             int currentListLevel = -1;
             int currentListType = -1;
             Stack<Tuple<int, int>> listStack = new Stack<Tuple<int, int>>();
 
             XmlDocument doc = new XmlDocument();
-
-            XmlNamespaceManager namespaceManager = new XmlNamespaceManager(doc.NameTable);
-            
-            namespaceManager.AddNamespace("w", "http://schemas.openxmlformats.org/wordprocessingml/2006/main");
+            XmlDocument docref = new XmlDocument();
+            XmlNamespaceManager docNamespaceManager = new XmlNamespaceManager(doc.NameTable);
+            XmlNamespaceManager docrefNameSpaceManager = new XmlNamespaceManager(docref.NameTable);
+            docNamespaceManager.AddNamespace("w", "http://schemas.openxmlformats.org/wordprocessingml/2006/main");
+            docrefNameSpaceManager.AddNamespace("x", "http://schemas.openxmlformats.org/package/2006/relationships");
             doc.Load(xmlDocPath);
+            docref.Load(xmlrefDocPath);
             
             // get the body of the document.
-            XmlNode body = doc.SelectSingleNode("//w:body", namespaceManager);
+            XmlNode body = doc.SelectSingleNode("//w:body", docNamespaceManager);
 
             //get all the children of the body
             XmlNodeList bodyItems = body.ChildNodes;
@@ -68,39 +70,16 @@ namespace Word_To_Markup_Converter.Module
                 //check if the item is a paragraph or a table
                 if (item.LocalName == "p")
                 {
-                    textToAppend.Clear();       //use a string builder here since there can be multiple w:r tags to iterate through in a single paragraph. 
-                    XmlNodeList paraTexts = item.SelectNodes("w:r", namespaceManager);
-                    foreach (XmlNode textBlock in paraTexts)
-                    {
-                        paraTextToAppend.Clear();
-                        //get the text within the particular block
-                        paraTextToAppend.Append(textBlock.SelectSingleNode("w:t", namespaceManager).InnerXml);
-
-                        //search for any formatting and apply it
-                        if (textBlock.SelectSingleNode("w:rPr", namespaceManager) != null)
-                        {
-                            XmlNodeList styleNodes = textBlock.SelectSingleNode("w:rPr", namespaceManager).ChildNodes;
-                            foreach (XmlNode styleNode in styleNodes)
-                            {
-                                //this method can be extended in the future to incorporate any other styling that might come along such as strike through lines. 
-                                if (styleNode.LocalName == "b")
-                                    formatBold(paraTextToAppend);
-                                else if (styleNode.LocalName == "i")
-                                    formatItalic(paraTextToAppend);
-                            }
-                        }
-                        textToAppend.Append(paraTextToAppend.ToString());
-                    }
+                    buildBasicParagraph(item, docNamespaceManager, textToAppend, docref, docrefNameSpaceManager);
 
                     //check if we are dealing with a special kind of paragraph
-                    if (item.SelectSingleNode("w:pPr", namespaceManager) != null)
-                    {                        
-
+                    if (item.SelectSingleNode("w:pPr", docNamespaceManager) != null)
+                    {                                            
                         //logic for dealing with special paragraphs
-                        if (item.SelectSingleNode("w:pPr/w:pStyle", namespaceManager).Attributes.GetNamedItem("w:val").Value.Contains("Heading"))
+                        if (item.SelectSingleNode("w:pPr/w:pStyle", docNamespaceManager).Attributes.GetNamedItem("w:val").Value.Contains("Heading"))
                         {                            
                             //logic for header
-                            formatHeader(textToAppend, item.SelectSingleNode("w:pPr/w:pStyle", namespaceManager).Attributes.GetNamedItem("w:val").Value);
+                            formatHeader(textToAppend, item.SelectSingleNode("w:pPr/w:pStyle", docNamespaceManager).Attributes.GetNamedItem("w:val").Value);
                             
                             while (listStack.Count != 0)
                             {
@@ -113,11 +92,11 @@ namespace Word_To_Markup_Converter.Module
                         }
 
                         //logic for dealing with list items
-                        if (item.SelectSingleNode("w:pPr/w:pStyle", namespaceManager).Attributes.GetNamedItem("w:val").Value.Contains("ListParagraph"))
+                        if (item.SelectSingleNode("w:pPr/w:pStyle", docNamespaceManager).Attributes.GetNamedItem("w:val").Value.Contains("ListParagraph"))
                         {
                             //get the index of the item being inserted. 
-                            int insertListLevel = Convert.ToInt16(item.SelectSingleNode("w:pPr/w:numPr/w:ilvl", namespaceManager).Attributes.GetNamedItem("w:val").Value);
-                            int insertListType = Convert.ToInt16(item.SelectSingleNode("w:pPr/w:numPr/w:numId", namespaceManager).Attributes.GetNamedItem("w:val").Value);
+                            int insertListLevel = Convert.ToInt16(item.SelectSingleNode("w:pPr/w:numPr/w:ilvl", docNamespaceManager).Attributes.GetNamedItem("w:val").Value);
+                            int insertListType = Convert.ToInt16(item.SelectSingleNode("w:pPr/w:numPr/w:numId", docNamespaceManager).Attributes.GetNamedItem("w:val").Value);
 
                             //list insertion has not begun yet
                             if (listStack.Count == 0)
@@ -203,7 +182,6 @@ namespace Word_To_Markup_Converter.Module
             textToAppend = new StringBuilder();
             while (listStack.Count != 0)
             {
-
                 currentListLevel = listStack.Peek().Item1;
                 currentListType = listStack.Peek().Item2;
                 formatListItemCloser(textToAppend, currentListLevel, currentListType);
@@ -213,6 +191,73 @@ namespace Word_To_Markup_Converter.Module
             docText.Append(textToAppend.ToString());
             Directory.Delete(extractPath, true);
         }
+
+        
+
+        #region logic for types of content
+
+        protected virtual void buildBasicParagraph(XmlNode item, XmlNamespaceManager namespaceManager, StringBuilder textToAppend, XmlDocument docref, XmlNamespaceManager docrefNameSpaceManager)
+        {
+            StringBuilder paraTextToAppend = new StringBuilder();
+            textToAppend.Clear();       //use a string builder here since there can be multiple tags to iterate through in a single paragraph. 
+            XmlNodeList paraNodes = item.ChildNodes;    //hyperlinks are stored within a hyper link tag. therefore iterating through just w:r tags isn't good enough
+            foreach (XmlNode childNode in paraNodes)
+            {
+                XmlNode textNode;
+                String link = "";
+                paraTextToAppend.Clear();
+                if (childNode.LocalName == "hyperlink")
+                {
+                    textNode = childNode.SelectSingleNode("w:r", namespaceManager);
+                    link = docref.SelectSingleNode("//x:Relationship[@Id='" + childNode.Attributes.GetNamedItem("r:id").Value + "']", docrefNameSpaceManager).Attributes.GetNamedItem("Target").Value;
+                }
+                else if (childNode.LocalName == "r")
+                {
+                    textNode = childNode;
+                }
+                else
+                {
+                    textNode = null;
+                }
+
+                if (textNode != null)
+                {
+                    //get the text within the particular block                
+                    paraTextToAppend.Append(textNode.SelectSingleNode("w:t", namespaceManager).InnerXml);
+
+                    //search for any formatting and apply it
+                    if (textNode.SelectSingleNode("w:rPr", namespaceManager) != null)
+                    {
+                        XmlNodeList styleNodes = textNode.SelectSingleNode("w:rPr", namespaceManager).ChildNodes;
+                        foreach (XmlNode styleNode in styleNodes)
+                        {
+                            //this method can be extended in the future to incorporate any other styling that might come along such as strike through lines. 
+                            if (styleNode.LocalName == "b")
+                                formatBold(paraTextToAppend);
+                            else if (styleNode.LocalName == "i")
+                                formatItalic(paraTextToAppend);
+                        }
+                    }
+                    if (!link.Equals(string.Empty))
+                    {
+                        formatLink(paraTextToAppend, link);
+                    }
+                    textToAppend.Append(paraTextToAppend.ToString());
+                }
+                
+            }
+        }
+
+        protected virtual void paragraphLogic(StringBuilder textToAppend)
+        {
+            
+        }
+
+        #endregion
+
+
+        #region format methods
+
 
         protected virtual void formatParagraph(StringBuilder textToAppend)
         {
@@ -310,6 +355,13 @@ namespace Word_To_Markup_Converter.Module
             textToAppend.Insert(0, boldTag.Item1);
             textToAppend.Append(boldTag.Item2);
         }
+
+        protected virtual void formatLink(StringBuilder textToAppend, String link)
+        {
+
+        }
+
+        #endregion
     }       
     
 }

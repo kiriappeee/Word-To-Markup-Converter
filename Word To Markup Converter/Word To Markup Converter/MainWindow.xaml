@@ -202,13 +202,14 @@
                         <Label Content="Header Text File" Margin="4" Grid.Column="0"/>
                         <TextBox Name="txtHeaderTextPath" Margin="4" Grid.Column="1"/>
                         <Button Name="btnOpenHeader" Margin="4" Grid.Column="2" Content="Select File" 
+                                Click="btnOpenHeader_Click"
                                 />
                     </Grid>
                     <Grid Grid.Row="4" Margin="4">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" SharedSizeGroup="innerColumn" />
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="429*" />
+                            <ColumnDefinition Width="73*" />
                         </Grid.ColumnDefinitions>
 
                         <Label Content="Footer Text File" Margin="4" Grid.Column="0"/>
