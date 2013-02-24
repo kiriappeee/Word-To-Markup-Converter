@@ -29,8 +29,8 @@ namespace Word_To_Markup_Converter.Module
         protected Tuple<string, string> unorderedListItemTag;
         protected Tuple<string, string> orderedListItemTag;
 
-        protected const int LIST_TYPE_UNORDERED = 3;
-        protected const int LIST_TYPE_ORDERED = 4;
+        protected const int LIST_TYPE_UNORDERED = 0;
+        protected const int LIST_TYPE_ORDERED = 1;
 
         public virtual void generateMarkup(String documentPath)
         {
@@ -45,18 +45,30 @@ namespace Word_To_Markup_Converter.Module
 
             string xmlDocPath = extractPath + "\\word\\document.xml";
             string xmlrefDocPath = extractPath + @"\word\_rels\document.xml.rels";
+            string xmlnumrefPath = extractPath + @"\word\numbering.xml";
             int currentListLevel = -1;
             int currentListType = -1;
             Stack<Tuple<int, int>> listStack = new Stack<Tuple<int, int>>();
 
             XmlDocument doc = new XmlDocument();
             XmlDocument docref = new XmlDocument();
+            XmlDocument numref = new XmlDocument();
+            
             XmlNamespaceManager docNamespaceManager = new XmlNamespaceManager(doc.NameTable);
             XmlNamespaceManager docrefNameSpaceManager = new XmlNamespaceManager(docref.NameTable);
+            XmlNamespaceManager numrefNameSpaceManager = new XmlNamespaceManager(numref.NameTable);
+            
             docNamespaceManager.AddNamespace("w", "http://schemas.openxmlformats.org/wordprocessingml/2006/main");
             docrefNameSpaceManager.AddNamespace("x", "http://schemas.openxmlformats.org/package/2006/relationships");
+            numrefNameSpaceManager.AddNamespace("w", "http://schemas.openxmlformats.org/wordprocessingml/2006/main");
+
             doc.Load(xmlDocPath);
             docref.Load(xmlrefDocPath);
+            
+            if(File.Exists(xmlnumrefPath))
+            {
+                numref.Load(xmlnumrefPath);
+            }
             
             // get the body of the document.
             XmlNode body = doc.SelectSingleNode("//w:body", docNamespaceManager);
@@ -76,7 +88,7 @@ namespace Word_To_Markup_Converter.Module
                     if (item.SelectSingleNode("w:pPr", docNamespaceManager) != null)
                     {                                            
                         //logic for dealing with special paragraphs
-                        if (item.SelectSingleNode("w:pPr/w:pStyle", docNamespaceManager).Attributes.GetNamedItem("w:val").Value.Contains("Heading"))
+                        if (item.SelectSingleNode("w:pPr/w:pStyle", docNamespaceManager) != null && item.SelectSingleNode("w:pPr/w:pStyle", docNamespaceManager).Attributes.GetNamedItem("w:val").Value.Contains("Heading"))
                         {                            
                             //logic for header
                             formatHeader(textToAppend, item.SelectSingleNode("w:pPr/w:pStyle", docNamespaceManager).Attributes.GetNamedItem("w:val").Value);
@@ -92,11 +104,11 @@ namespace Word_To_Markup_Converter.Module
                         }
 
                         //logic for dealing with list items
-                        if (item.SelectSingleNode("w:pPr/w:pStyle", docNamespaceManager).Attributes.GetNamedItem("w:val").Value.Contains("ListParagraph"))
+                        if (item.SelectSingleNode("w:pPr/w:pStyle", docNamespaceManager) != null && item.SelectSingleNode("w:pPr/w:pStyle", docNamespaceManager).Attributes.GetNamedItem("w:val").Value.Contains("ListParagraph"))
                         {
                             //get the index of the item being inserted. 
                             int insertListLevel = Convert.ToInt16(item.SelectSingleNode("w:pPr/w:numPr/w:ilvl", docNamespaceManager).Attributes.GetNamedItem("w:val").Value);
-                            int insertListType = Convert.ToInt16(item.SelectSingleNode("w:pPr/w:numPr/w:numId", docNamespaceManager).Attributes.GetNamedItem("w:val").Value);
+                            int insertListType = getListType(Convert.ToInt16(item.SelectSingleNode("w:pPr/w:numPr/w:numId", docNamespaceManager).Attributes.GetNamedItem("w:val").Value), numref, numrefNameSpaceManager);
 
                             //list insertion has not begun yet
                             if (listStack.Count == 0)
@@ -190,6 +202,16 @@ namespace Word_To_Markup_Converter.Module
             }
             docText.Append(textToAppend.ToString());
             Directory.Delete(extractPath, true);
+        }
+
+        protected virtual int getListType(short numid, XmlDocument doc, XmlNamespaceManager ns)
+        {
+            if (doc.SelectSingleNode("//w:abstractNum[@w:abstractNumId=\"" +
+                doc.SelectSingleNode("//w:num[@w:numId=\"1\"]", ns).SelectSingleNode("w:abstractNumId", ns).Attributes.GetNamedItem("w:val").Value + "\"]", ns).SelectSingleNode
+                ("w:lvl", ns).SelectSingleNode("w:numFmt", ns).Attributes.GetNamedItem("w:val").Value == "bullet")
+                return LIST_TYPE_UNORDERED;
+            else
+                return LIST_TYPE_ORDERED;
         }
 
         
