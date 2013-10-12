@@ -9,6 +9,8 @@ using System.Text.RegularExpressions;
 using System.Xml;
 using Ionic.Zip;
 using System.IO;
+using System.Web;
+
 namespace Word_To_Markup_Converter.Module
 {
     public abstract class MarkupGenerator
@@ -245,8 +247,7 @@ namespace Word_To_Markup_Converter.Module
                 if (textNode != null)
                 {
                     //get the text within the particular block                
-                    paraTextToAppend.Append(textNode.SelectSingleNode("w:t", namespaceManager).InnerXml);
-
+                    paraTextToAppend.Append(HttpUtility.HtmlEncode(textNode.SelectSingleNode("w:t", namespaceManager).InnerXml));
                     //search for any formatting and apply it
                     if (textNode.SelectSingleNode("w:rPr", namespaceManager) != null)
                     {
