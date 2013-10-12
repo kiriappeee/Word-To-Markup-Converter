@@ -41,8 +41,7 @@ namespace Word_To_Markup_Converter.Module
         public override void generateMarkup(String documentPath)
         {
             base.generateMarkup(documentPath);
-
-            docText.Insert(0, "<body>\n").Append("</body>");
+            docText.Insert(0, Properties.Resources.DEFAULT_HEADER).Append(Properties.Resources.DEAFULT_FOOTER);
         }
 
         protected override void formatLink(StringBuilder textToAppend, string link)
