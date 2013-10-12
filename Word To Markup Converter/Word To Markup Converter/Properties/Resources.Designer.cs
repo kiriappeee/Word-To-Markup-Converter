@@ -59,5 +59,33 @@ namespace Word_To_Markup_Converter.Properties {
                 resourceCulture = value;
             }
         }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to 
+        ///&lt;/body&gt;
+        ///
+        ///&lt;/html&gt;.
+        /// </summary>
+        internal static string DEAFULT_FOOTER {
+            get {
+                return ResourceManager.GetString("DEAFULT_FOOTER", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to &lt;!DOCTYPE html&gt;
+        ///&lt;html&gt;
+        ///&lt;head&gt;
+        ///&lt;meta content=&quot;text/html; charset=utf-8&quot; http-equiv=&quot;Content-Type&quot; /&gt;
+        ///&lt;title&gt;&lt;/title&gt;
+        ///&lt;/head&gt;
+        ///&lt;body&gt;
+        ///.
+        /// </summary>
+        internal static string DEFAULT_HEADER {
+            get {
+                return ResourceManager.GetString("DEFAULT_HEADER", resourceCulture);
+            }
+        }
     }
 }

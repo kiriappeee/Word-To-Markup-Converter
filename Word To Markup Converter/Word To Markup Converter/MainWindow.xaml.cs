@@ -15,6 +15,7 @@ using MahApps.Metro.Controls;
 using Word_To_Markup_Converter.Module;
 using Microsoft.Win32;
 using System.IO;
+using System.Text.RegularExpressions;
 
 namespace Word_To_Markup_Converter
 {
@@ -52,7 +53,9 @@ namespace Word_To_Markup_Converter
                     }
                     else
                     {
+
                         ((HTMLGenerator)generator).generateMarkup(txtDocumentName.Text);
+
                     }
                      
                     System.Diagnostics.Process.Start(txtSavePath.Text);                    
@@ -128,7 +131,5 @@ namespace Word_To_Markup_Converter
         {
             txtSavePath.Text = saveNewFile.FileName;
         }
-
-        
     }
 }
