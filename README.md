@@ -13,7 +13,7 @@ The Word to Markup Generator is being designed (no I haven’t finished it yet) 
 * Select the type of markup you want
 * Select the file you wish to save to
 * _For HTML only._ Select the header and footer template. If these are not selected then a very basic header and footer section will be added before and after the body of the html file. 
-* _For HTML only._ Input the title of the document. This will automatically search for the title field if an HTML header has been given and replace it. _**This feature is not yet built in. For now a title is specified only for the default header.**_
+* _For HTML only._ Input the title of the document. This will automatically search for the title field if an HTML header has been given and replace it. 
 
 
 ##Feature List (Done and todo)##
