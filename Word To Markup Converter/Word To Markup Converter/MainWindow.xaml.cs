@@ -54,7 +54,7 @@ namespace Word_To_Markup_Converter
                     else
                     {
 
-                        ((HTMLGenerator)generator).generateMarkup(txtDocumentName.Text);
+                        ((HTMLGenerator)generator).generateMarkup(txtDocumentName.Text, txtDocumentTitle.Text);
 
                     }
                      
