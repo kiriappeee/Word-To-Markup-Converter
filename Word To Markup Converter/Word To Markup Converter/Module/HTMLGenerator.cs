@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Xml.Linq;
 using System.IO;
+using System.Text.RegularExpressions;
 
 namespace Word_To_Markup_Converter.Module
 {
@@ -36,12 +37,19 @@ namespace Word_To_Markup_Converter.Module
             StreamReader footerReader = new StreamReader(footerPath);
 
             docText.Insert(0, headerReader.ReadToEnd()).Append(footerReader.ReadToEnd());
+            createTitle(documentTitle);
         }
 
-        public override void generateMarkup(String documentPath)
+        public void generateMarkup(String documentPath, String documentTitle)
         {
             base.generateMarkup(documentPath);
             docText.Insert(0, Properties.Resources.DEFAULT_HEADER).Append(Properties.Resources.DEAFULT_FOOTER);
+            createTitle(documentTitle);
+        }
+
+        protected void createTitle(String documentTitle)
+        {
+            docText = new StringBuilder(Regex.Replace(docText.ToString(), @"<title>.*<\/title>", "<title>" + documentTitle + "</title>"));
         }
 
         protected override void formatLink(StringBuilder textToAppend, string link)
