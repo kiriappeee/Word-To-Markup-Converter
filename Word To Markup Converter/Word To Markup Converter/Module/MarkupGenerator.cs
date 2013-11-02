@@ -247,7 +247,7 @@ namespace Word_To_Markup_Converter.Module
                 if (textNode != null)
                 {
                     //get the text within the particular block                
-                    paraTextToAppend.Append(HttpUtility.HtmlEncode(textNode.SelectSingleNode("w:t", namespaceManager).InnerXml));
+                    paraTextToAppend.Append(HttpUtility.HtmlEncode(textNode.SelectSingleNode("w:t", namespaceManager).InnerXml.Replace("’","'").Replace("“","\"").Replace("”","\"")));
                     //search for any formatting and apply it
                     if (textNode.SelectSingleNode("w:rPr", namespaceManager) != null)
                     {
